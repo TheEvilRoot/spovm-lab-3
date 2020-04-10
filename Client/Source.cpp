@@ -34,14 +34,25 @@ int main(const int argc, const char *argv[]) {
   char *buffer = new char[255];
   buffer[254] = 0;
   DWORD readed = 0;
+  DWORD i = 0;
 
   while (true) {
-    WaitForSingleObject(toWrite, INFINITE);
-    ReadFile(pipeFile, buffer, 255, &readed, nullptr);
-    fprintf(stderr, "%d < ", readed);
-    buffer[readed] = 0;
-    fprintf(stderr, "%s\n", buffer);
-    ReleaseSemaphore(writeComplete, 1, nullptr);
+    if (WaitForSingleObject(toWrite, 500) != WAIT_TIMEOUT) {
+      fprintf(stderr, "\r");
+      ReadFile(pipeFile, buffer, 255, &readed, nullptr);
+      fprintf(stderr, "%d < ", readed);
+      buffer[readed] = 0;
+      fprintf(stderr, "%s\n", buffer);
+      ReleaseSemaphore(writeComplete, 1, nullptr);
+    } else {
+      if (i++ >= 3) {
+        fprintf(stderr, "\r");
+        for (; i != 0; i--)
+          fprintf(stderr, " ");
+        fprintf(stderr, "\r");
+      }
+      fprintf(stderr, ".");
+    }
   }
 
   return 0;
