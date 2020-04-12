@@ -1,11 +1,9 @@
 #include <unistd.h>
 #include <cstdio>
 #include <string>
-#include <csignal>
 #include <sys/sem.h>
 #include <sys/shm.h>
 
-#define LOG(a) fprintf(stderr, "Server: %s\n", a)
 
 std::string getString(size_t maxSize) {
   std::string str;
@@ -46,30 +44,37 @@ void writeToShared(char *shared, const std::string &string) {
     shared[1 + i] = string[i];
 }
 
+void killClient(int sid) {
+  struct sembuf ops[1] = { 2, 1, 0 };
+  semop(sid, ops, 1);
+}
+
 int main(const int argc, const char *argv[]) {
   int smid = shmget(6741,256, IPC_CREAT | 0666);
-  int sid = semget(6741, 2, IPC_CREAT | 0655);
+  if (smid < 0) { perror("smid"); }
+  int sid = semget(6741, 3, IPC_CREAT | 0655);
+  if (sid < 0) { perror("sid"); }
   pid_t client = startClient();
+  if (client < 0) { perror("fork"); }
 
   if (sid >= 0 && smid >= 0) {
     char *mem = (char*) shmat(smid, nullptr, 0);
     while (true) {
-      fprintf(stderr, "> ");
-      auto string = getString(8);
+      auto string = getString(255);
       if (string == "#q") break;
       writeToShared(mem, string);
       setReadSemaphore(sid);
       waitClientSemaphore(sid);
     }
     shmdt(mem);
-  } else {
-    LOG("Semaphore or shared memory failed");
   }
+
+  killClient(sid);
   if (sid >= 0)
     semctl(sid, 0, IPC_RMID);
   if (smid >= 0)
     shmctl(smid, IPC_RMID, nullptr);
-  kill(client, SIGKILL);
+  fprintf(stderr, "Waiting client to die...\n");
   waitpid(client, nullptr, 0);
   return 0;
 }
