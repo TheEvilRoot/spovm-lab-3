@@ -28,14 +28,22 @@ pid_t startClient() {
   return clientPid;
 }
 
-int setSem(int sid) {
+int setReadSemaphore(int sid) {
   struct sembuf ops[1] = { 0, 1, 0 };
   return semop(sid, ops, 1);
 }
 
-int waitDone(int sid) {
+int waitClientSemaphore(int sid) {
   struct sembuf ops[1] = { 1, -1, 0 };
   return semop(sid, ops, 1);
+}
+
+void writeToShared(char *shared, const std::string &string) {
+  if (string.size() > 255) return;
+
+  shared[0] = static_cast<char>(string.size());
+  for (char i = 0; i < shared[0]; i++)
+    shared[1 + i] = string[i];
 }
 
 int main(const int argc, const char *argv[]) {
@@ -46,20 +54,16 @@ int main(const int argc, const char *argv[]) {
   if (sid >= 0 && smid >= 0) {
     char *mem = (char*) shmat(smid, nullptr, 0);
     while (true) {
+      fprintf(stderr, "> ");
       auto string = getString(8);
       if (string == "#q") break;
-      LOG("Server acquire string");
-      mem[0] = string.size();
-      for (int i = 0; i < mem[0]; i++)
-        mem[1 + i] = string[i];
-      setSem(sid);
-      LOG("Sem setted. Waiting...");
-      waitDone(sid);
-      LOG("Done");
+      writeToShared(mem, string);
+      setReadSemaphore(sid);
+      waitClientSemaphore(sid);
     }
-  shmdt(mem);
+    shmdt(mem);
   } else {
-    LOG("Semaphore failed");
+    LOG("Semaphore or shared memory failed");
   }
   if (sid >= 0)
     semctl(sid, 0, IPC_RMID);

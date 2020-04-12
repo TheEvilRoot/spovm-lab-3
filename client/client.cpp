@@ -24,16 +24,12 @@ int main(const int argc, const char *argv[]) {
   if (sid >= 0 && smid >= 0){
     char *mem = (char*) shmat(smid, nullptr, 0);
     while (true) {
-      LOG("Waiting server...");
       waitServer(sid);
-      LOG("Working...");
-      fprintf(stderr, "got length %d\n", (int)mem[0]);
+      fprintf(stderr, "< ");
       for (int i = 0; i < mem[0]; i++)
         fprintf(stderr, "%c", mem[1 + i]);
       fprintf(stderr, "\n");
-      LOG("Done");
       setDone(sid);
-      LOG("Done setted");
     }
   } else {
     LOG("Semaphore failed");
