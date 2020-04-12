@@ -1,4 +1,4 @@
-СПОВМ ЛР2 (Linux)
+СПОВМ ЛР3 (Linux)
 ----
 
 How to run?
