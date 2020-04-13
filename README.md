@@ -29,5 +29,12 @@ and build binaries
 cmake --build ./cmake-build --target all -j 2
 ```
 
-`control` and `handler` binaries will be stored in `build/` directory.
+`client and `server` binaries will be stored in `build/` directory.
 
+Client will write it's output to `client.log` file. Use 
+
+```bash
+tail -f client.log
+```
+
+to monitor client output in real time.
